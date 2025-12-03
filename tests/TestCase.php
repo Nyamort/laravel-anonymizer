@@ -3,8 +3,8 @@
 namespace Nyamort\LaravelAnonymizer\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Orchestra\Testbench\TestCase as Orchestra;
 use Nyamort\LaravelAnonymizer\LaravelAnonymizerServiceProvider;
+use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
 {

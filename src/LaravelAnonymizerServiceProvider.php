@@ -2,9 +2,9 @@
 
 namespace Nyamort\LaravelAnonymizer;
 
+use Nyamort\LaravelAnonymizer\Commands\LaravelAnonymizerCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Nyamort\LaravelAnonymizer\Commands\LaravelAnonymizerCommand;
 
 class LaravelAnonymizerServiceProvider extends PackageServiceProvider
 {
