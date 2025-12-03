@@ -38,6 +38,18 @@ class LaravelAnonymizer
             $this->config->get('anonymizer.strategies', [])
         );
 
+        if (is_string($rule) && array_key_exists($rule, $strategies)) {
+            $strategy = $strategies[$rule];
+
+            if (is_string($strategy) && class_exists($strategy)) {
+                $strategy = app($strategy);
+            }
+
+            if (is_callable($strategy)) {
+                return $this->invokeStrategy($strategy, $model, $attribute);
+            }
+        }
+
         if (is_string($rule) && class_exists($rule)) {
             $strategy = app($rule);
 
@@ -48,10 +60,6 @@ class LaravelAnonymizer
 
         if (is_callable($rule)) {
             return $this->invokeStrategy($rule, $model, $attribute);
-        }
-
-        if (is_string($rule) && array_key_exists($rule, $strategies)) {
-            return $this->invokeStrategy($strategies[$rule], $model, $attribute);
         }
 
         return $rule;

@@ -3,6 +3,8 @@
 namespace Nyamort\LaravelAnonymizer\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Nyamort\LaravelAnonymizer\LaravelAnonymizerServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -27,11 +29,24 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app)
     {
         config()->set('database.default', 'testing');
+        config()->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
 
-        /*
-         foreach (\Illuminate\Support\Facades\File::allFiles(__DIR__ . '/../database/migrations') as $migration) {
-            (include $migration->getRealPath())->up();
-         }
-         */
+        collect(['users', 'custom_users', 'faker_users'])
+            ->each(function (string $table): void {
+                Schema::create($table, function (Blueprint $table): void {
+                    $table->id();
+                    $table->string('name');
+                    $table->string('email')->unique();
+                    $table->text('note')->nullable();
+                    $table->json('meta')->nullable();
+                    $table->string('phone')->nullable();
+                    $table->timestamps();
+                    $table->softDeletes();
+                });
+            });
     }
 }

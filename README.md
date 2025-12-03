@@ -23,13 +23,6 @@ You can install the package via composer:
 composer require nyamort/laravel-anonymizer
 ```
 
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag="laravel-anonymizer-migrations"
-php artisan migrate
-```
-
 You can publish the config file with:
 
 ```bash
@@ -40,21 +33,91 @@ This is the contents of the published config file:
 
 ```php
 return [
+    'mask_string' => '[anonymous]',
+
+    'email_domain' => 'example.test',
+
+    'hash_algorithm' => 'sha256',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom strategies
+    |--------------------------------------------------------------------------
+    |
+    | You can register your own strategies and reference them in the $anonymize
+    | array on your models. Each strategy receives the current value and the
+    | model instance and must return the anonymized value.
+    |
+    */
+    'strategies' => [
+        // 'phone' => fn (string $value, $model) => '0000000000',
+    ],
 ];
-```
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="laravel-anonymizer-views"
 ```
 
 ## Usage
 
 ```php
-$laravelAnonymizer = new Nyamort\LaravelAnonymizer();
-echo $laravelAnonymizer->echoPhrase('Hello, Nyamort!');
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Nyamort\LaravelAnonymizer\Concerns\Anonymize;
+
+class User extends Model
+{
+    use Anonymize;
+    use SoftDeletes;
+
+    protected array $anonymize = [
+        'name' => 'mask',               // becomes "[anonymous]"
+        'email' => 'email',             // anonymous+<uuid>@example.test
+        'note' => 'hash',               // hashed with the configured algorithm
+        'meta' => fn () => [],          // closures receive the current value and the model
+    ];
+}
+
+$user = User::create([...]);
+
+// Will anonymize the configured attributes, then soft delete the row.
+$user->delete();
+
+// Can also be called manually without deleting:
+$user->anonymize();
+
+// You can also point to any invokable class without touching the config:
+class Uppercase implements \Nyamort\LaravelAnonymizer\Contracts\AnonymizationStrategy
+{
+    public function __invoke(mixed $value, \Illuminate\Database\Eloquent\Model $model): mixed
+    {
+        return is_string($value) ? strtoupper($value) : $value;
+    }
+}
+
+class Admin extends Model
+{
+    use Anonymize;
+    use SoftDeletes;
+
+    protected array $anonymize = [
+        'name' => Uppercase::class, // resolved through the container automatically
+    ];
+}
+
+// Faker is auto-injected as a 3rd argument if your strategy asks for it:
+class FakeEmail implements \Nyamort\LaravelAnonymizer\Contracts\AnonymizationStrategy
+{
+    public function __invoke(mixed $value, \Illuminate\Database\Eloquent\Model $model, \Faker\Generator $faker): mixed
+    {
+        return $faker->unique()->safeEmail();
+    }
+}
 ```
+
+Built-in strategies you can reference in `$anonymize`:
+
+- `mask` / `string`: replaces the value with `mask_string`
+- `email`: `anonymous+<uuid>@<email_domain>`
+- `hash`: hashes the current value with `hash_algorithm`
+- `uuid`, `random_string`, `null`, `empty`, `empty_array`, `phone`
 
 ## Testing
 

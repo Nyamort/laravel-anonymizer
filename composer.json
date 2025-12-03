@@ -34,8 +34,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Nyamort\\LaravelAnonymizer\\": "src/",
-            "Nyamort\\LaravelAnonymizer\\Database\\Factories\\": "database/factories/"
+            "Nyamort\\LaravelAnonymizer\\": "src/"
         }
     },
     "autoload-dev": {

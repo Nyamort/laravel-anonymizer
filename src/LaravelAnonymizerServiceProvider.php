@@ -17,9 +17,13 @@ class LaravelAnonymizerServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('laravel-anonymizer')
-            ->hasConfigFile()
-            ->hasViews()
-            ->hasMigration('create_laravel_anonymizer_table')
-            ->hasCommand(LaravelAnonymizerCommand::class);
+            ->hasConfigFile();
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(LaravelAnonymizer::class, function ($app) {
+            return new LaravelAnonymizer($app['config']);
+        });
     }
 }
