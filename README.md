@@ -26,7 +26,7 @@ composer require nyamort/laravel-anonymizer
 You can publish the config file with:
 
 ```bash
-php artisan vendor:publish --tag="laravel-anonymizer-config"
+php artisan vendor:publish --tag="anonymizer-config"
 ```
 
 This is the contents of the published config file:
