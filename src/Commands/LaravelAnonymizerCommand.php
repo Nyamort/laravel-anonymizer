@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Nyamort\LaravelAnonymizer\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class LaravelAnonymizerCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'laravel-anonymizer';
 
     public $description = 'My command';
 
