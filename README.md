@@ -6,7 +6,7 @@
 
 Replace Eloquent attributes using built-in or custom strategies. Models using the `Anonymize` and `SoftDeletes` traits anonymize their configured attributes when deleted, within a database transaction.
 
-Requires PHP 8.4+ and Laravel 11, 12, or 13. Faker is optional.
+Requires PHP 8.4+ and Laravel 11, 12, or 13.
 
 ## Installation
 
@@ -110,7 +110,7 @@ Direct `Model::where(...)->delete()`, SQL deletes, and database cascades do not 
 | `empty_array` | Empty array; use an appropriate Eloquent array/JSON cast |
 | `uuid` | Random UUID |
 | `random_string` | Random 32-character string |
-| `phone` | Numeric phone string; without Faker, exactly 10 digits |
+| `phone` | Random numeric phone string, exactly 10 digits |
 | `hash` | Unkeyed hash using `hash_algorithm`, default `sha256` |
 | `hmac` | Keyed hash using `hash_algorithm` and `hmac_key` |
 
@@ -124,7 +124,7 @@ Use `hmac` when you need deterministic keyed pseudonymization. Set `ANONYMIZER_H
 
 ## Custom strategies
 
-Implement the strategy contract with a nullable, optional third argument:
+Implement the strategy contract with the current value and the model:
 
 ```php
 class DocumentationUppercase implements \Nyamort\LaravelAnonymizer\Contracts\AnonymizationStrategy
@@ -132,7 +132,6 @@ class DocumentationUppercase implements \Nyamort\LaravelAnonymizer\Contracts\Ano
     public function __invoke(
         mixed $value,
         \Illuminate\Database\Eloquent\Model $model,
-        ?\Faker\Generator $faker = null,
     ): mixed {
         return is_string($value) ? strtoupper($value) : $value;
     }
@@ -151,7 +150,7 @@ return [
 
 Custom classes are resolved through Laravel's container, including their constructor dependencies. Use class names in configuration so that `php artisan config:cache` works.
 
-Rules also accept closures, invokable objects, callable arrays, and function/static method names. Callables receive zero to three arguments: the current value, the model, and an optional Faker generator. Callables that require more arguments are rejected.
+Rules also accept closures, invokable objects, callable arrays, and function/static method names. Callables receive zero to two arguments: the current value and the model. Callables that require more arguments are rejected.
 
 ### Literal values and invalid rules
 
@@ -169,33 +168,6 @@ $rules = [
 
 Unknown aliases and non-callable rule definitions throw `InvalidArgumentException` before any rule is invoked. Unsupported callable signatures fail before replacement values are assigned. This is a change from the previous behavior, which silently stored the rule itself as the attribute value. Migrate literal rules to `LiteralValue` or a closure.
 
-### Optional Faker support
-
-When installed, Faker is passed as the third argument to strategies that accept it. Without it, nullable arguments receive `null`. A callable requiring a non-null Faker generator produces an actionable exception.
-
-Install Faker as a production dependency when your custom strategy needs it:
-
-```bash
-composer require fakerphp/faker
-```
-
-```php
-class DocumentationFakeEmail implements \Nyamort\LaravelAnonymizer\Contracts\AnonymizationStrategy
-{
-    public function __invoke(
-        mixed $value,
-        \Illuminate\Database\Eloquent\Model $model,
-        ?\Faker\Generator $faker = null,
-    ): string {
-        if ($faker === null) {
-            throw new \LogicException('Install fakerphp/faker to use DocumentationFakeEmail.');
-        }
-
-        return $faker->unique()->safeEmail();
-    }
-}
-```
-
 ## Service API
 
 ```php
@@ -203,7 +175,7 @@ $anonymizer = app(\Nyamort\LaravelAnonymizer\LaravelAnonymizer::class);
 $anonymizer->anonymize($user, ['name' => 'mask']); // In memory only.
 ```
 
-The facade `Nyamort\LaravelAnonymizer\Facades\LaravelAnonymizer` exposes the same method. Resolve the service through the container; its constructor now receives the strategy registry and container. Services are resolved afresh to avoid retaining a previous application's configuration in long-running workers.
+The facade `Nyamort\LaravelAnonymizer\Facades\LaravelAnonymizer` exposes the same method. Resolve the service through the container; its constructor receives the strategy registry. Services are resolved afresh to avoid retaining a previous application's configuration in long-running workers.
 
 ## Development
 
@@ -216,7 +188,7 @@ composer format:check
 
 The regression suite covers failed and refused deletions, nested transactions, quiet/permanent deletion, batches, custom aliases, literal values, casts, and README examples.
 
-To verify a consumer installation without development dependencies or Faker:
+To verify a consumer installation without development dependencies:
 
 ```bash
 composer install --working-dir=integration/production --no-dev

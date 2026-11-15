@@ -35,7 +35,7 @@ class TestCase extends Orchestra
             'prefix' => '',
         ]);
 
-        collect(['users', 'custom_users', 'faker_users'])
+        collect(['users', 'custom_users'])
             ->each(function (string $table): void {
                 Schema::create($table, function (Blueprint $table): void {
                     $table->id();

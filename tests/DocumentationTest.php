@@ -37,5 +37,4 @@ it('compiles the PHP examples and checks their strategy contracts', function () 
     expect($user->delete())->toBeTrue();
     expect(User::withTrashed()->findOrFail($user->id)->name)->toBe('[anonymous]');
     expect(new DocumentationUppercase)->toBeInstanceOf(AnonymizationStrategy::class);
-    expect(new DocumentationFakeEmail)->toBeInstanceOf(AnonymizationStrategy::class);
 });

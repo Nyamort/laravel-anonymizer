@@ -3,21 +3,15 @@
 namespace Nyamort\LaravelAnonymizer;
 
 use Closure;
-use Faker\Generator;
-use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
-use LogicException;
 use Nyamort\LaravelAnonymizer\Contracts\AnonymizationStrategy;
 use ReflectionFunction;
 use Throwable;
 
 class LaravelAnonymizer
 {
-    public function __construct(
-        private StrategyRegistry $strategies,
-        private Container $container,
-    ) {}
+    public function __construct(private StrategyRegistry $strategies) {}
 
     /**
      * @param  array<array-key, mixed>  $rules
@@ -60,37 +54,21 @@ class LaravelAnonymizer
         $value = $model->getAttribute($attribute);
 
         if ($strategy instanceof AnonymizationStrategy) {
-            return $strategy($value, $model, $this->faker());
+            return $strategy($value, $model);
         }
 
         $reflection = new ReflectionFunction(Closure::fromCallable($strategy));
 
-        if ($reflection->getNumberOfRequiredParameters() > 3) {
-            throw new InvalidArgumentException('Anonymization callables may require at most three arguments: value, model, and Faker.');
+        if ($reflection->getNumberOfRequiredParameters() > 2) {
+            throw new InvalidArgumentException('Anonymization callables may require at most two arguments: value and model.');
         }
 
-        $parameters = $reflection->getNumberOfParameters();
+        $parameters = $reflection->isVariadic() ? 2 : $reflection->getNumberOfParameters();
 
-        if ($parameters < 3 && ! $reflection->isVariadic()) {
-            return match (true) {
-                $parameters === 0 => $strategy(),
-                $parameters === 1 => $strategy($value),
-                default => $strategy($value, $model),
-            };
-        }
-
-        $faker = $this->faker();
-        $parameter = $reflection->getParameters()[2] ?? null;
-
-        if ($faker === null && $parameter !== null && ! $parameter->allowsNull()) {
-            throw new LogicException('This strategy requires Faker. Install fakerphp/faker as a production dependency or accept a nullable Faker generator.');
-        }
-
-        return $strategy($value, $model, $faker);
-    }
-
-    protected function faker(): ?Generator
-    {
-        return class_exists(Generator::class) ? $this->container->make(Generator::class) : null;
+        return match ($parameters) {
+            0 => $strategy(),
+            1 => $strategy($value),
+            default => $strategy($value, $model),
+        };
     }
 }

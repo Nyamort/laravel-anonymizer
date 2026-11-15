@@ -38,7 +38,7 @@ it('generates an email, UUID, random string and numeric phone', function () {
     expect($user->email)->toMatch('/^anonymous\+[0-9a-f-]+@redacted\.test$/');
     expect(Str::isUuid($user->name))->toBeTrue();
     expect($user->note)->toHaveLength(32);
-    expect($user->phone)->toMatch('/^\d+$/');
+    expect($user->phone)->toMatch('/^\d{10}$/');
 });
 
 it('uses a configured masking string and hash algorithm', function () {

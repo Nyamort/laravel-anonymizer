@@ -2,7 +2,6 @@
 
 namespace Nyamort\LaravelAnonymizer\Strategies;
 
-use Faker\Generator;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
@@ -12,7 +11,7 @@ class HmacStrategy implements AnonymizationStrategy
 {
     public function __construct(private Repository $config) {}
 
-    public function __invoke(mixed $value, Model $model, ?Generator $faker = null): string
+    public function __invoke(mixed $value, Model $model): string
     {
         $key = $this->config->get('anonymizer.hmac_key');
 

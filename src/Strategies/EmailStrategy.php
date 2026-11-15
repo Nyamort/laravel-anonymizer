@@ -2,7 +2,6 @@
 
 namespace Nyamort\LaravelAnonymizer\Strategies;
 
-use Faker\Generator;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -12,7 +11,7 @@ class EmailStrategy implements AnonymizationStrategy
 {
     public function __construct(private Repository $config) {}
 
-    public function __invoke(mixed $value, Model $model, ?Generator $faker = null): string
+    public function __invoke(mixed $value, Model $model): string
     {
         $domain = $this->config->get('anonymizer.email_domain', 'example.test');
 

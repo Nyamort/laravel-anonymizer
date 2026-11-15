@@ -1,8 +1,6 @@
 <?php
 
-use Faker\Generator;
 use Illuminate\Config\Repository;
-use Illuminate\Contracts\Container\Container;
 use Nyamort\LaravelAnonymizer\LaravelAnonymizer;
 use Nyamort\LaravelAnonymizer\LiteralValue;
 use Nyamort\LaravelAnonymizer\StrategyRegistry;
@@ -136,7 +134,7 @@ it('does not leave partially transformed attributes after a strategy fails', fun
     expect($user->getAttributes())->toBe($attributes);
 });
 
-it('supports callables accepting zero to three arguments', function () {
+it('supports callables accepting zero to two arguments', function () {
     $user = new User(['name' => 'Jane Doe']);
     $service = app(LaravelAnonymizer::class);
 
@@ -148,9 +146,6 @@ it('supports callables accepting zero to three arguments', function () {
 
     $service->anonymize($user, ['name' => fn ($value, $model) => $model === $user ? 'two' : 'bad']);
     expect($user->name)->toBe('two');
-
-    $service->anonymize($user, ['name' => fn ($value, $model, Generator $faker) => $faker instanceof Generator ? 'three' : 'bad']);
-    expect($user->name)->toBe('three');
 });
 
 it('restores attributes when an Eloquent mutator rejects a replacement', function () {
@@ -180,39 +175,16 @@ it('supports variadic strategies', function () {
     $user = new User(['name' => 'Jane Doe']);
 
     app(LaravelAnonymizer::class)->anonymize($user, [
-        'name' => fn (...$arguments) => count($arguments) === 3 ? 'three' : 'bad',
+        'name' => fn (...$arguments) => count($arguments) === 2 ? 'two' : 'bad',
     ]);
 
-    expect($user->name)->toBe('three');
-});
-
-it('does not resolve Faker for callables accepting fewer than three arguments', function () {
-    app()->bind(Generator::class, fn () => throw new RuntimeException('Faker should not be resolved'));
-    $user = new User(['name' => 'Jane Doe']);
-
-    app(LaravelAnonymizer::class)->anonymize($user, ['name' => fn ($value) => strtoupper($value)]);
-
-    expect($user->name)->toBe('JANE DOE');
-});
-
-it('explains a missing Faker dependency for a non-nullable callable argument', function () {
-    $service = new class(app(StrategyRegistry::class), app(Container::class)) extends LaravelAnonymizer
-    {
-        protected function faker(): ?Generator
-        {
-            return null;
-        }
-    };
-
-    expect(fn () => $service->anonymize(new User(['name' => 'Jane Doe']), [
-        'name' => fn ($value, $model, Generator $faker) => $faker->word(),
-    ]))->toThrow(LogicException::class, 'Install fakerphp/faker');
+    expect($user->name)->toBe('two');
 });
 
 it('rejects callables requiring unsupported additional arguments', function () {
     expect(fn () => app(LaravelAnonymizer::class)->anonymize(new User, [
-        'name' => fn ($value, $model, $faker, $fourth) => 'bad',
-    ]))->toThrow(InvalidArgumentException::class, 'at most three arguments');
+        'name' => fn ($value, $model, $third) => 'bad',
+    ]))->toThrow(InvalidArgumentException::class, 'at most two arguments');
 });
 
 it('provides a fresh service with the current configuration repository', function () {

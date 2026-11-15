@@ -99,5 +99,5 @@ jobs:
           composer require --working-dir=integration/production "laravel/framework:${{ matrix.laravel }}" --no-update --no-interaction
           composer install --working-dir=integration/production --no-dev --prefer-dist --no-interaction
 
-      - name: Verify anonymization without Faker
+      - name: Verify production anonymization
         run: php integration/production/smoke.php

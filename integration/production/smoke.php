@@ -2,7 +2,6 @@
 
 require __DIR__.'/vendor/autoload.php';
 
-use Faker\Generator;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Database\Eloquent\Model;
@@ -13,10 +12,6 @@ use Illuminate\Support\Str;
 use Nyamort\LaravelAnonymizer\Concerns\Anonymize;
 use Nyamort\LaravelAnonymizer\LaravelAnonymizer;
 use Nyamort\LaravelAnonymizer\LaravelAnonymizerServiceProvider;
-
-if (class_exists(Generator::class)) {
-    throw new RuntimeException('The production consumer must not have Faker installed.');
-}
 
 $app = new Application(__DIR__);
 $app->instance('config', new Repository([
@@ -95,19 +90,10 @@ if (! $stored->trashed()
 }
 
 $service = $app->make(LaravelAnonymizer::class);
-$service->anonymize($stored, ['name' => fn ($value, $model, ?Generator $faker) => $faker === null ? 'no Faker' : 'unexpected']);
+$service->anonymize($stored, ['name' => fn ($value, $model) => $model === $stored ? strtoupper($value) : 'unexpected']);
 
-if ($stored->name !== 'no Faker') {
-    throw new RuntimeException('Nullable Faker arguments must receive null when Faker is absent.');
+if ($stored->name !== '[ANONYMOUS]') {
+    throw new RuntimeException('Custom strategies must receive the current value and the model.');
 }
 
-try {
-    $service->anonymize($stored, ['name' => fn ($value, $model, Generator $faker) => $faker->word()]);
-    throw new RuntimeException('A required Faker dependency should produce an actionable error.');
-} catch (LogicException $exception) {
-    if (! str_contains($exception->getMessage(), 'Install fakerphp/faker')) {
-        throw $exception;
-    }
-}
-
-echo "Production smoke test passed without Faker.\n";
+echo "Production smoke test passed.\n";
