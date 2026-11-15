@@ -1,0 +1,16 @@
+{
+    "name": "nyamort/anonymizer-production-test",
+    "require": {
+        "laravel/framework": "^11.0||^12.0||^13.0",
+        "nyamort/laravel-anonymizer": "@dev"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../..",
+            "options": {
+                "symlink": true
+            }
+        }
+    ]
+}

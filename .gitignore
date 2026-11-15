@@ -1,6 +1,7 @@
 # Composer Related
 composer.lock
 /vendor
+/integration/production/vendor
 
 # Frontend Assets
 /node_modules
