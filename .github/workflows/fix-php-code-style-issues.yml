@@ -1,28 +1,36 @@
-name: Fix PHP code style issues
+name: Check PHP code style
 
 on:
   push:
     paths:
       - '**.php'
+      - 'composer.json'
+      - '.github/workflows/fix-php-code-style-issues.yml'
+  pull_request:
+    paths:
+      - '**.php'
+      - 'composer.json'
+      - '.github/workflows/fix-php-code-style-issues.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   php-code-styling:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
+      - uses: actions/checkout@v6
 
-      - name: Fix PHP code style issues
-        uses: aglipanci/laravel-pint-action@2.6
-
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v7
+      - uses: shivammathur/setup-php@v2
         with:
-          commit_message: Fix styling
+          php-version: '8.4'
+          coverage: none
+
+      - uses: ramsey/composer-install@v3
+
+      - name: Validate package metadata
+        run: composer validate --strict
+
+      - name: Check formatting
+        run: composer format:check

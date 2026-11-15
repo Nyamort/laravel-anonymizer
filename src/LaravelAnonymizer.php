@@ -4,107 +4,93 @@ namespace Nyamort\LaravelAnonymizer;
 
 use Closure;
 use Faker\Generator;
-use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
+use LogicException;
 use Nyamort\LaravelAnonymizer\Contracts\AnonymizationStrategy;
 use ReflectionFunction;
-use ReflectionFunctionAbstract;
-use ReflectionMethod;
+use Throwable;
 
 class LaravelAnonymizer
 {
-    public function __construct(private Repository $config) {}
+    public function __construct(
+        private StrategyRegistry $strategies,
+        private Container $container,
+    ) {}
 
+    /**
+     * @param  array<array-key, mixed>  $rules
+     */
     public function anonymize(Model $model, array $rules): Model
     {
+        $strategies = [];
+
         foreach ($rules as $attribute => $rule) {
-            $model->setAttribute(
-                $attribute,
-                $this->resolveRule($model, $attribute, $rule)
-            );
+            if (! is_string($attribute) || $attribute === '') {
+                throw new InvalidArgumentException('Anonymization rules must use non-empty attribute names.');
+            }
+
+            $strategies[$attribute] = $this->strategies->resolve($rule);
+        }
+
+        $attributes = $model->getAttributes();
+
+        try {
+            $values = [];
+
+            foreach ($strategies as $attribute => $strategy) {
+                $values[$attribute] = $this->invokeStrategy($strategy, $model, $attribute);
+            }
+
+            foreach ($values as $attribute => $value) {
+                $model->setAttribute($attribute, $value);
+            }
+        } catch (Throwable $exception) {
+            $model->setRawAttributes($attributes);
+
+            throw $exception;
         }
 
         return $model;
     }
 
-    protected function resolveRule(Model $model, string $attribute, mixed $rule): mixed
-    {
-        if ($rule instanceof Closure || $rule instanceof AnonymizationStrategy) {
-            return $this->invokeStrategy($rule, $model, $attribute);
-        }
-
-        $strategies = array_merge(
-            $this->defaultStrategies(),
-            $this->config->get('anonymizer.strategies', [])
-        );
-
-        if (is_string($rule) && array_key_exists($rule, $strategies)) {
-            $strategy = $strategies[$rule];
-
-            if (is_string($strategy) && class_exists($strategy)) {
-                $strategy = app($strategy);
-            }
-
-            if (is_callable($strategy)) {
-                return $this->invokeStrategy($strategy, $model, $attribute);
-            }
-        }
-
-        if (is_string($rule) && class_exists($rule)) {
-            $strategy = app($rule);
-
-            if ($strategy instanceof AnonymizationStrategy || is_callable($strategy)) {
-                return $this->invokeStrategy($strategy, $model, $attribute);
-            }
-        }
-
-        if (is_callable($rule)) {
-            return $this->invokeStrategy($rule, $model, $attribute);
-        }
-
-        return $rule;
-    }
-
-    protected function defaultStrategies(): array
-    {
-        return $this->config->get('anonymizer.strategies', []);
-    }
-
     protected function invokeStrategy(callable $strategy, Model $model, string $attribute): mixed
     {
         $value = $model->getAttribute($attribute);
-        $faker = $this->faker();
 
-        $reflection = $this->reflectCallable($strategy);
+        if ($strategy instanceof AnonymizationStrategy) {
+            return $strategy($value, $model, $this->faker());
+        }
+
+        $reflection = new ReflectionFunction(Closure::fromCallable($strategy));
+
+        if ($reflection->getNumberOfRequiredParameters() > 3) {
+            throw new InvalidArgumentException('Anonymization callables may require at most three arguments: value, model, and Faker.');
+        }
+
         $parameters = $reflection->getNumberOfParameters();
 
-        return match (true) {
-            $parameters === 0 => $strategy(),
-            $parameters === 1 => $strategy($value),
-            $parameters === 2 => $strategy($value, $model),
-            default => $strategy($value, $model, $faker),
-        };
+        if ($parameters < 3 && ! $reflection->isVariadic()) {
+            return match (true) {
+                $parameters === 0 => $strategy(),
+                $parameters === 1 => $strategy($value),
+                default => $strategy($value, $model),
+            };
+        }
+
+        $faker = $this->faker();
+        $parameter = $reflection->getParameters()[2] ?? null;
+
+        if ($faker === null && $parameter !== null && ! $parameter->allowsNull()) {
+            throw new LogicException('This strategy requires Faker. Install fakerphp/faker as a production dependency or accept a nullable Faker generator.');
+        }
+
+        return $strategy($value, $model, $faker);
     }
 
-    protected function reflectCallable(callable $callable): ReflectionFunctionAbstract
+    protected function faker(): ?Generator
     {
-        if (is_array($callable)) {
-            return new ReflectionMethod($callable[0], $callable[1]);
-        }
-
-        if (is_string($callable) && str_contains($callable, '::')) {
-            return new ReflectionMethod(...explode('::', $callable, 2));
-        }
-
-        if (is_object($callable) && ! ($callable instanceof Closure)) {
-            return new ReflectionMethod($callable, '__invoke');
-        }
-
-        return new ReflectionFunction($callable(...));
-    }
-
-    protected function faker(): Generator
-    {
-        return app(Generator::class);
+        return class_exists(Generator::class) ? $this->container->make(Generator::class) : null;
     }
 }

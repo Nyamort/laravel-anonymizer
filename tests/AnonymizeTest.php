@@ -1,5 +1,7 @@
 <?php
 
+use Nyamort\LaravelAnonymizer\Tests\Fixtures\CustomUser;
+use Nyamort\LaravelAnonymizer\Tests\Fixtures\FakerUser;
 use Nyamort\LaravelAnonymizer\Tests\Fixtures\User;
 
 it('anonymizes attributes when deleting a model', function () {
@@ -46,7 +48,7 @@ it('can anonymize without deleting', function () {
 });
 
 it('supports inline custom strategies without config', function () {
-    $user = \Nyamort\LaravelAnonymizer\Tests\Fixtures\CustomUser::create([
+    $user = CustomUser::create([
         'name' => 'John Doe',
         'email' => 'john@example.com',
         'note' => 'Private note',
@@ -55,7 +57,7 @@ it('supports inline custom strategies without config', function () {
 
     $user->delete();
 
-    $trashed = \Nyamort\LaravelAnonymizer\Tests\Fixtures\CustomUser::withTrashed()->findOrFail($user->id);
+    $trashed = CustomUser::withTrashed()->findOrFail($user->id);
 
     expect($trashed->name)->toBe('JOHN DOE');
     expect($trashed->email)->toBe('JOHN@EXAMPLE.COM');
@@ -64,14 +66,14 @@ it('supports inline custom strategies without config', function () {
 });
 
 it('injects faker into strategies when requested', function () {
-    $user = \Nyamort\LaravelAnonymizer\Tests\Fixtures\FakerUser::create([
+    $user = FakerUser::create([
         'name' => 'Jane Doe',
         'email' => 'jane@example.com',
     ]);
 
     $user->delete();
 
-    $trashed = \Nyamort\LaravelAnonymizer\Tests\Fixtures\FakerUser::withTrashed()->findOrFail($user->id);
+    $trashed = FakerUser::withTrashed()->findOrFail($user->id);
 
     expect($trashed->email)->not()->toBe('jane@example.com');
     expect($trashed->email)->toMatch('/@/');
